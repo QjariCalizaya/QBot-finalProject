@@ -1,0 +1,1 @@
+﻿este es un bot para ventas web, el cual ayuda al usuario a encontrar caracteristicas o algun producto en nuestra tienda
