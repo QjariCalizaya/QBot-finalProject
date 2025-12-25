@@ -29,8 +29,49 @@ def init_db():
     UNIQUE(date, hour),
     UNIQUE(user_id, status)
     );
+
+    CREATE TABLE IF NOT EXISTS user_state (
+    user_id INTEGER PRIMARY KEY,
+    state TEXT,
+    data TEXT
+    );
     """
     with _connect() as conn:
         conn.execute(schema)
 
 
+def has_active_appointment(user_id: int) -> bool:
+    with _connect() as conn:
+        cur = conn.execute(
+            "SELECT 1 FROM appointments WHERE user_id = ? AND status = 'active'",
+            (user_id,)
+        )
+        return cur.fetchone() is not None
+    
+def get_taken_hours(date: str):
+    with _connect() as conn:
+        cur = conn.execute(
+            "SELECT hour FROM appointments WHERE date = ?",
+            (date,)
+        )
+        return [row[0] for row in cur.fetchall()]
+
+def create_appointment(data: dict) -> bool:
+    try:
+        with _connect() as conn:
+            conn.execute("""
+                INSERT INTO appointments
+                (user_id, name, phone, address, date, hour, type)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                data["user_id"],
+                data["name"],
+                data["phone"],
+                data["address"],
+                data["date"],
+                data["hour"],
+                data["type"]
+            ))
+        return True
+    except sqlite3.IntegrityError:
+        return False
