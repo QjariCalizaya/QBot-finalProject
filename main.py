@@ -4,7 +4,9 @@ from telebot import types
 from dotenv import load_dotenv
 from typing import List, Literal
 from db import *
-import logging
+from states import *
+from config import *
+
 
 load_dotenv()
 
@@ -14,6 +16,26 @@ if not TOKEN:
     raise RuntimeError("there isn't TOKEN in .env")
 
 init_db()
+user_states = {}
+user_data = {}
+ISSUES = {
+    "Sin conexión": [
+        "Reinicie el router (desconéctelo 30 segundos).",
+        "Verifique que el cable WAN esté conectado.",
+        "Revise que la luz de Internet esté encendida."
+    ],
+    "Internet lento": [
+        "Reinicie el router.",
+        "Desconecte dispositivos que no esté usando.",
+        "Conéctese por cable si es posible."
+    ],
+    "WiFi no aparece": [
+        "Verifique que el WiFi esté habilitado.",
+        "Reinicie el router.",
+        "Acérquese al router."
+    ]
+}
+
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -44,58 +66,83 @@ def cmd_help(message:types.Message)-> None:
 def cmd_start(message):
     user_id = message.chat.id
 
-    #logger.info(f"/start recibido de user_id={user_id}")
+    logger.info(f"/start recibido de user_id={user_id}")
 
+    # 1️⃣ ¿Tiene cita activa?
     if has_active_appointment(user_id):
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        markup.add("Cambiar fecha y hora", "Cambiar dirección")
+        markup = types.InlineKeyboardMarkup()
+        markup.add(
+            types.InlineKeyboardButton(
+                text="Cambiar fecha y hora",
+                callback_data="change_datetime"
+            ),
+            types.InlineKeyboardButton(
+                text="Cambiar dirección",
+                callback_data="change_address"
+            )
+        )
 
         bot.send_message(
             user_id,
-            "📅 Ya tienes una cita técnica activa.\n"
-            "¿Qué deseas hacer?",
+            "📅 Ya tienes una cita activa.\n¿Qué deseas hacer?",
             reply_markup=markup
         )
 
-        save_user_state(user_id, UserState.CONFIRM.name, {})
+        save_user_state(user_id, UserState.CONFIRM.value, {})
         return
 
+    # 2️⃣ ¿Tiene estado guardado?
     state, data = load_user_state(user_id)
 
-    if state:
-        user_states[user_id] = UserState[state]
+    if False: #state
+        user_states[user_id] = UserState(state)
         user_data[user_id] = data
 
         bot.send_message(
             user_id,
-            "🔄 Bienvenido de nuevo.\n"
-            "Continuamos donde lo dejaste."
-        )
-
-        logger.info(
-            f"Estado restaurado para user_id={user_id}: {state}"
+            "🔄 Continuamos donde lo dejaste."
         )
         return
 
-    # 3️⃣ Inicio normal del flujo
+    # 3️⃣ Inicio normal
     user_states[user_id] = UserState.START
     user_data[user_id] = {}
 
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup = types.InlineKeyboardMarkup()
     for issue in ISSUES.keys():
-        markup.add(issue)
+        print(issue)
+        markup.add(
+            types.InlineKeyboardButton(
+                text=issue,
+                callback_data=f"issue:{issue}"
+            )
+
+        )
+
 
     bot.send_message(
         user_id,
-        "👋 Hola, soy el asistente técnico del servicio de internet.\n\n"
-        "Selecciona el problema que estás presentando:",
+        "👋 Hola, soy el asistente técnico.\nSelecciona el problema que presentas:",
         reply_markup=markup
     )
 
-    # Persistimos estado inicial
-    save_user_state(user_id, UserState.START.name, {})
+    save_user_state(user_id, UserState.START.value, {})
 
-    logger.info(f"Flujo iniciado para user_id={user_id}")
+@bot.callback_query_handler(func=lambda call: call.data.startswith("issue:"))
+def handle_issue(call):
+    bot.answer_callback_query(call.id)
+
+    issue = call.data.split(":", 1)[1]
+
+    user_id = call.message.chat.id
+    user_data[user_id]["type"] = issue
+
+    text = "🔧 Soluciones rápidas:\n\n"
+    for solution in ISSUES[issue]:
+        text += f"• {solution}\n"
+
+    bot.send_message(user_id, text)
+
 
 
 if __name__ == "__main__":
