@@ -68,7 +68,7 @@ def cmd_start(message):
 
     logger.info(f"/start recibido de user_id={user_id}")
 
-    # 1️⃣ ¿Tiene cita activa?
+   ####3
     if has_active_appointment(user_id):
         markup = types.InlineKeyboardMarkup()
         markup.add(
@@ -84,27 +84,28 @@ def cmd_start(message):
 
         bot.send_message(
             user_id,
-            "📅 Ya tienes una cita activa.\n¿Qué deseas hacer?",
+            "Ya tienes una cita activa.\n¿Qué deseas hacer?",
             reply_markup=markup
         )
 
         save_user_state(user_id, UserState.CONFIRM.value, {})
         return
 
-    # 2️⃣ ¿Tiene estado guardado?
+ 
     state, data = load_user_state(user_id)
 
+#####
     if False: #state
         user_states[user_id] = UserState(state)
         user_data[user_id] = data
 
         bot.send_message(
             user_id,
-            "🔄 Continuamos donde lo dejaste."
+            "Continuamos donde lo dejaste."
         )
         return
 
-    # 3️⃣ Inicio normal
+    #### 
     user_states[user_id] = UserState.START
     user_data[user_id] = {}
 
@@ -128,20 +129,86 @@ def cmd_start(message):
 
     save_user_state(user_id, UserState.START.value, {})
 
+
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith("issue:"))
 def handle_issue(call):
     bot.answer_callback_query(call.id)
 
+    user_id = call.message.chat.id
     issue = call.data.split(":", 1)[1]
 
-    user_id = call.message.chat.id
+    # Guardamos el tipo de problema
+    user_states[user_id] = UserState.SHOW_SOLUTIONS
     user_data[user_id]["type"] = issue
 
-    text = "🔧 Soluciones rápidas:\n\n"
+    # Construimos el texto de soluciones
+    text = "*Soluciones rápidas recomendadas:*\n\n"
     for solution in ISSUES[issue]:
         text += f"• {solution}\n"
 
-    bot.send_message(user_id, text)
+    text += "\nSi el problema persiste, puedes solicitar un técnico."
+
+    # Botones debajo del mensaje
+    markup = types.InlineKeyboardMarkup()
+    markup.add(
+        types.InlineKeyboardButton(
+            text="Solicitar técnico",
+            callback_data="request_technician"
+        )
+    )
+    markup.add(
+        types.InlineKeyboardButton(
+            text="🔙 Volver",
+            callback_data="back_to_start"
+        )
+    )
+
+    bot.send_message(
+        user_id,
+        text,
+        reply_markup=markup,
+        parse_mode="Markdown"
+    )
+
+    # Persistimos estado
+    save_user_state(
+        user_id,
+        UserState.SHOW_SOLUTIONS.value,
+        user_data[user_id]
+    )
+
+@bot.callback_query_handler(func=lambda call: call.data == "back_to_start")
+def back_to_start(call):
+    bot.answer_callback_query(call.id)
+
+    # Reutilizamos /start
+    cmd_start(call.message)
+
+
+@bot.callback_query_handler(func=lambda call: call.data == "request_technician")
+def request_technician(call):
+    bot.answer_callback_query(call.id)
+
+    user_id = call.message.chat.id
+
+    # Regla de negocio: solo una cita activa
+    if has_active_appointment(user_id):
+        bot.send_message(
+            user_id,
+            " Ya tienes una cita técnica activa.\n"
+            "No puedes solicitar otra."
+        )
+        return
+
+    user_states[user_id] = UserState.NAME
+    save_user_state(user_id, UserState.NAME.value, user_data[user_id])
+
+    bot.send_message(
+        user_id,
+        "Por favor, indica tu *nombre completo*:",
+        parse_mode="Markdown"
+    )
 
 
 

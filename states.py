@@ -2,4 +2,9 @@
 
 class UserState(Enum):
     START = "START"
+    SHOW_SOLUTIONS = "SHOW_SOLUTIONS"
+    NAME = "NAME"
+    ADDRESS = "ADDRESS"
+    DATE = "DATE"
+    HOUR = "HOUR"
     CONFIRM = "CONFIRM"

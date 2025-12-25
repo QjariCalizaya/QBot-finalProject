@@ -9,12 +9,17 @@ load_dotenv()
 DB = os.getenv("DB_PATH")
 
 
-def get_connection():
-    return sqlite3.connect(DB)
+def _connect():
+    conn = sqlite3.connect(DB)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA busy_timeout = 5000")
+    return conn
 
 
 def init_db():
-    with get_connection() as conn:
+    with _connect() as conn:
         conn.execute("""
         CREATE TABLE IF NOT EXISTS appointments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,9 +37,9 @@ def init_db():
         """)
 
 
-# ✅ ¿El usuario tiene una cita activa?
+
 def has_active_appointment(user_id: int) -> bool:
-    with get_connection() as conn:
+    with _connect() as conn:
         cur = conn.execute(
             "SELECT 1 FROM appointments WHERE user_id = ? AND status = 'active'",
             (user_id,)
@@ -42,9 +47,9 @@ def has_active_appointment(user_id: int) -> bool:
         return cur.fetchone() is not None
 
 
-# 💾 Guardar estado del usuario
+
 def save_user_state(user_id, state, data):
-    with get_connection() as conn:
+    with _connect() as conn:
         conn.execute("""
             INSERT INTO user_state (user_id, state, data)
             VALUES (?, ?, ?)
@@ -53,9 +58,9 @@ def save_user_state(user_id, state, data):
         """, (user_id, state, json.dumps(data), state, json.dumps(data)))
 
 
-# 📥 Cargar estado del usuario
+
 def load_user_state(user_id):
-    with get_connection() as conn:
+    with _connect() as conn:
         cur = conn.execute(
             "SELECT state, data FROM user_state WHERE user_id = ?",
             (user_id,)
