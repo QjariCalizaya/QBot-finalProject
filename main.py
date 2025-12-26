@@ -6,6 +6,7 @@ from typing import List, Literal
 from db import *
 from states import *
 from config import *
+from datetime import date, timedelta
 
 
 load_dotenv()
@@ -248,7 +249,6 @@ def handle_client_address(message: types.Message):
     user_id = message.chat.id
     address = message.text.strip()
 
-    # Validación básica
     if len(address) < 5 or address.isdigit():
         bot.send_message(
             user_id,
@@ -258,25 +258,87 @@ def handle_client_address(message: types.Message):
         )
         return
 
-    # Guardar dirección
     user_data[user_id]["address"] = address
-
-    # Avanzar al siguiente estado (fecha)
     user_states[user_id] = UserState.DATE
 
-    # Persistir estado
     save_user_state(
         user_id,
         UserState.DATE.value,
         user_data[user_id]
     )
 
-    # Mensaje temporal (luego aquí irán las fechas)
     bot.send_message(
         user_id,
         "Dirección guardada correctamente.\n"
         "A continuación podrás seleccionar la *fecha de la cita*."
     )
+    show_date_selection(user_id)
+
+
+def get_next_7_days():
+    today = date.today()
+    days = []
+    for i in range(1, 8):
+        d = today + timedelta(days=i)
+        days.append(d)
+    return days
+
+def show_date_selection(user_id):
+    markup = types.InlineKeyboardMarkup()
+
+    for d in get_next_7_days():
+        label = d.strftime("%A %d-%m")
+        callback = f"date:{d.isoformat()}"
+
+        markup.add(
+            types.InlineKeyboardButton(
+                text=label,
+                callback_data=callback
+            )
+        )
+
+    markup.add(
+        types.InlineKeyboardButton(
+            text="Volver",
+            callback_data="back_to_start"
+        )
+    )
+
+    bot.send_message(
+        user_id,
+        "Selecciona la *fecha* para la visita técnica:",
+        reply_markup=markup,
+        parse_mode="Markdown"
+    )
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("date:"))
+def handle_date_selection(call):
+    bot.answer_callback_query(call.id)
+
+    user_id = call.message.chat.id
+    date_selected = call.data.split(":", 1)[1]
+
+ 
+    user_data[user_id]["date"] = date_selected
+
+
+    user_states[user_id] = UserState.HOUR
+
+    save_user_state(
+        user_id,
+        UserState.HOUR.value,
+        user_data[user_id]
+    )
+
+    bot.send_message(
+        user_id,
+        f"Fecha seleccionada: *{date_selected}*\n"
+        "Ahora selecciona el *horario disponible*.",
+        parse_mode="Markdown"
+    )
+
+    #show_hour_selection()
 
 
 
