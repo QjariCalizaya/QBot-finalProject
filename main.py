@@ -82,7 +82,9 @@ def show_date_selection(user_id):
 
 def show_hour_selection(user_id):
     selected_date = user_data[user_id]["date"]
-    taken_hours = get_taken_hours(selected_date)
+    exclude_user = user_id if user_data[user_id].get("editing") else None
+    taken_hours = get_taken_hours(selected_date, exclude_user)
+
     available_hours = [h for h in WORKING_HOURS if h not in taken_hours]
 
     if not available_hours:
@@ -233,7 +235,15 @@ def handle_address(message):
     user_id = message.chat.id
     user_data[user_id]["address"] = message.text.strip()
     user_states[user_id] = UserState.DATE
-    show_date_selection(user_id)
+
+    if user_data[user_id].get("editing"):
+        user_states[user_id] = UserState.CONFIRM
+        save_user_state(user_id, UserState.CONFIRM.value, user_data[user_id])
+        show_summary(user_id)
+    else:
+        user_states[user_id] = UserState.DATE
+        save_user_state(user_id, UserState.DATE.value, user_data[user_id])
+        show_date_selection(user_id)
 
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("date:"))
@@ -343,6 +353,29 @@ def cmd_change(message):
         return
     ensure_user_data_from_db(user_id)
     show_edit_menu(user_id)
+
+def show_summary(user_id):
+    d = user_data[user_id]
+
+    text = (
+        "*Resumen de la cita técnica:*\n\n"
+        f"Nombre: {d['name']}\n"
+        f"Teléfono: {d['phone']}\n"
+        f"Dirección: {d['address']}\n"
+        f"Fecha: {d['date']}\n"
+        f"Hora: {d['hour']}:00\n"
+        f"Problema: {d['type']}\n\n"
+        "¿Deseas confirmar la cita?"
+    )
+
+    markup = types.InlineKeyboardMarkup()
+    markup.add(
+        types.InlineKeyboardButton("Confirmar", callback_data="confirm_appointment"),
+        types.InlineKeyboardButton("Cambiar datos", callback_data="edit_appointment"),
+    )
+
+    bot.send_message(user_id, text, reply_markup=markup, parse_mode="Markdown")
+
 
 
 if __name__ == "__main__":

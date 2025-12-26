@@ -82,13 +82,26 @@ def load_user_state(user_id):
             return row[0], json.loads(row[1])
         return None, {}
 
-def get_taken_hours(date: str) -> list[int]:
+def get_taken_hours(date: str, exclude_user_id: int | None = None) -> list[int]:
     with _connect() as conn:
-        cur = conn.execute(
-            "SELECT hour FROM appointments WHERE date = ? AND status = 'active'",
-            (date,)
-        )
+        if exclude_user_id:
+            cur = conn.execute(
+                """
+                SELECT hour FROM appointments
+                WHERE date = ? AND status = 'active' AND user_id != ?
+                """,
+                (date, exclude_user_id),
+            )
+        else:
+            cur = conn.execute(
+                """
+                SELECT hour FROM appointments
+                WHERE date = ? AND status = 'active'
+                """,
+                (date,),
+            )
         return [row["hour"] for row in cur.fetchall()]
+
 
 def create_appointment(data: dict) -> bool:
     try:
