@@ -115,3 +115,30 @@ def create_appointment(data: dict) -> bool:
         return True
     except sqlite3.IntegrityError:
         return False
+
+
+def update_appointment(user_id: int, data: dict) -> bool:
+    try:
+        with _connect() as conn:
+            conn.execute("""
+                UPDATE appointments
+                SET
+                    name = ?,
+                    phone = ?,
+                    address = ?,
+                    date = ?,
+                    hour = ?,
+                    type = ?
+                WHERE user_id = ? AND status = 'active'
+            """, (
+                data["name"],
+                data["phone"],
+                data["address"],
+                data["date"],
+                data["hour"],
+                data["type"],
+                user_id
+            ))
+        return True
+    except sqlite3.IntegrityError:
+        return False

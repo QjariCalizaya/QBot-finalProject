@@ -538,6 +538,76 @@ def confirm_appointment(call):
     save_user_state(user_id, None, {})
 
 
+@bot.callback_query_handler(func=lambda call: call.data == "edit_appointment")
+def edit_appointment(call):
+    bot.answer_callback_query(call.id)
+
+    user_id = call.message.chat.id
+
+    markup = types.InlineKeyboardMarkup()
+    markup.add(
+        types.InlineKeyboardButton(
+            text="Cambiar fecha y hora",
+            callback_data="edit_datetime"
+        )
+    )
+    markup.add(
+        types.InlineKeyboardButton(
+            text="Cambiar dirección",
+            callback_data="edit_address"
+        )
+    )
+
+    bot.send_message(
+        user_id,
+        "¿Qué deseas modificar de tu cita?",
+        reply_markup=markup
+    )
+
+
+@bot.callback_query_handler(func=lambda call: call.data == "edit_datetime")
+def edit_datetime(call):
+    bot.answer_callback_query(call.id)
+
+    user_id = call.message.chat.id
+
+    user_states[user_id] = UserState.DATE
+
+    save_user_state(
+        user_id,
+        UserState.DATE.value,
+        user_data[user_id]
+    )
+
+    bot.send_message(
+        user_id,
+        "Vamos a cambiar la *fecha y hora* de tu cita."
+    )
+
+    show_date_selection(user_id)
+
+@bot.callback_query_handler(func=lambda call: call.data == "edit_address")
+def edit_address(call):
+    bot.answer_callback_query(call.id)
+
+    user_id = call.message.chat.id
+
+    user_states[user_id] = UserState.ADDRESS
+
+    save_user_state(
+        user_id,
+        UserState.ADDRESS.value,
+        user_data[user_id]
+    )
+
+    bot.send_message(
+        user_id,
+        "Por favor, escribe la *nueva dirección* para la visita técnica:",
+        parse_mode="Markdown"
+    )
+
+
+
 
 
 if __name__ == "__main__":
