@@ -160,7 +160,7 @@ def handle_issue(call):
     )
     markup.add(
         types.InlineKeyboardButton(
-            text="🔙 Volver",
+            text="Volver",
             callback_data="back_to_start"
         )
     )
@@ -445,6 +445,64 @@ def change_date(call):
     )
 
     show_date_selection(user_id)
+
+@bot.callback_query_handler(func=lambda call: call.data == "confirm_appointment")
+def confirm_appointment(call):
+    bot.answer_callback_query(call.id)
+
+    user_id = call.message.chat.id
+
+    if has_active_appointment(user_id):
+        bot.send_message(
+            user_id,
+            "Ya tienes una cita activa.\n"
+            "No puedes confirmar otra."
+        )
+        return
+
+    appointment_data = user_data[user_id].copy()
+    appointment_data["user_id"] = user_id
+
+    success = create_appointment(appointment_data)
+
+    if not success:
+        bot.send_message(
+            user_id,
+            "El horario seleccionado ya fue ocupado.\n"
+            "Por favor selecciona otra hora o fecha."
+        )
+
+        user_states[user_id] = UserState.DATE
+        save_user_state(
+            user_id,
+            UserState.DATE.value,
+            user_data[user_id]
+        )
+
+        show_date_selection(user_id)
+        return
+
+
+    bot.send_message(
+        user_id,
+        "*Cita confirmada con éxito*\n\n"
+        f"Fecha: {appointment_data['date']}\n"
+        f"Hora: {appointment_data['hour']}:00\n"
+        f"Dirección: {appointment_data['address']}\n\n"
+        "Nuestro técnico se pondrá en contacto contigo.",
+        parse_mode="Markdown"
+    )
+
+    logger.info(
+        f"Cita creada: user_id={user_id}, "
+        f"{appointment_data['date']} {appointment_data['hour']}:00"
+    )
+
+    user_states.pop(user_id, None)
+    user_data.pop(user_id, None)
+
+    save_user_state(user_id, None, {})
+
 
 
 

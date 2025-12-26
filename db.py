@@ -88,3 +88,28 @@ def get_taken_hours(date: str) -> list[int]:
             (date,)
         )
         return [row["hour"] for row in cur.fetchall()]
+
+def create_appointment(data: dict) -> bool:
+    try:
+        with _connect() as conn:
+            conn.execute("""
+                INSERT INTO appointments (
+                    user_id,
+                    name,
+                    address,
+                    date,
+                    hour,
+                    type,
+                    status
+                ) VALUES (?, ?, ?, ?, ?, ?, 'active')
+            """, (
+                data["user_id"],
+                data["name"],
+                data["address"],
+                data["date"],
+                data["hour"],
+                data["type"]
+            ))
+        return True
+    except sqlite3.IntegrityError:
+        return False
