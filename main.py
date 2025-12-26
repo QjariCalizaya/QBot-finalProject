@@ -20,20 +20,20 @@ user_states = {}
 user_data = {}
 
 ISSUES = {
-    "Sin conexión": [
-        "Reinicie el router (desconéctelo 30 segundos).",
-        "Verifique que el cable WAN esté conectado.",
-        "Revise que la luz de Internet esté encendida."
+    "Нет соединения": [
+        "Перезагрузите роутер (отключите его на 30 секунд).",
+        "Проверьте, подключён ли WAN-кабель.",
+        "Убедитесь, что индикатор интернета горит."
     ],
-    "Internet lento": [
-        "Reinicie el router.",
-        "Desconecte dispositivos que no esté usando.",
-        "Conéctese por cable si es posible."
+    "Медленный интернет": [
+        "Перезагрузите роутер.",
+        "Отключите неиспользуемые устройства.",
+        "По возможности подключитесь по кабелю."
     ],
-    "WiFi no aparece": [
-        "Verifique que el WiFi esté habilitado.",
-        "Reinicie el router.",
-        "Acérquese al router."
+    "Wi-Fi не отображается": [
+        "Проверьте, включён ли Wi-Fi.",
+        "Перезагрузите роутер.",
+        "Подойдите ближе к роутеру."
     ]
 }
 
@@ -45,8 +45,7 @@ def setup_bot_commands():
         telebot.types.BotCommand(command="help", description="справка"),
         telebot.types.BotCommand(command="start", description="начать"),
         telebot.types.BotCommand(command="change", description="изменить запись"),
-        telebot.types.BotCommand(command="cancel", description="cancelar cita"),
-
+        telebot.types.BotCommand(command="cancel", description="отменить запись"),
     ]
     bot.set_my_commands(commands)
 
@@ -76,7 +75,7 @@ def show_date_selection(user_id):
         )
     bot.send_message(
         user_id,
-        "Selecciona la *fecha* para la visita técnica:",
+        "Выберите *дату* для визита техника:",
         reply_markup=markup,
         parse_mode="Markdown"
     )
@@ -92,7 +91,7 @@ def show_hour_selection(user_id):
     if not available_hours:
         bot.send_message(
             user_id,
-            "No hay horarios disponibles para esta fecha."
+            "На выбранную дату нет доступного времени."
         )
         show_date_selection(user_id)
         return
@@ -108,7 +107,7 @@ def show_hour_selection(user_id):
 
     bot.send_message(
         user_id,
-        "Selecciona un *horario disponible*:",
+        "Выберите *доступное время*:",
         reply_markup=markup,
         parse_mode="Markdown"
     )
@@ -118,19 +117,19 @@ def show_edit_menu(user_id):
     markup = types.InlineKeyboardMarkup()
     markup.add(
         types.InlineKeyboardButton(
-            text="Cambiar fecha y hora",
+            text="Изменить дату и время",
             callback_data="edit_datetime"
         )
     )
     markup.add(
         types.InlineKeyboardButton(
-            text="Cambiar dirección",
+            text="Изменить адрес",
             callback_data="edit_address"
         )
     )
     bot.send_message(
         user_id,
-        "¿Qué deseas modificar de tu cita?",
+        "Что вы хотите изменить в записи?",
         reply_markup=markup
     )
 
@@ -139,7 +138,7 @@ def show_edit_menu(user_id):
 def cmd_help(message):
     bot.send_message(
         message.chat.id,
-        "/start - iniciar\n/change - editar cita"
+        "/start — начать\n/change — изменить запись\n/cancel — отменить запись"
     )
 
 
@@ -156,7 +155,7 @@ def cmd_start(message):
     if state:
         user_states[user_id] = UserState(state)
         user_data[user_id] = data
-        bot.send_message(user_id, "Continuamos donde lo dejaste.")
+        bot.send_message(user_id, "Продолжаем с того места, где вы остановились.")
         return
 
     user_states[user_id] = UserState.START
@@ -173,7 +172,7 @@ def cmd_start(message):
 
     bot.send_message(
         user_id,
-        "Selecciona el problema que presentas:",
+        "Выберите проблему, с которой вы столкнулись:",
         reply_markup=markup
     )
 
@@ -187,14 +186,14 @@ def handle_issue(call):
     user_states[user_id] = UserState.SHOW_SOLUTIONS
     user_data[user_id]["type"] = issue
 
-    text = "*Soluciones rápidas:*\n\n"
+    text = "*Рекомендуемые быстрые решения:*\n\n"
     for s in ISSUES[issue]:
         text += f"- {s}\n"
 
     markup = types.InlineKeyboardMarkup()
     markup.add(
         types.InlineKeyboardButton(
-            text="Solicitar técnico",
+            text="Вызвать техника",
             callback_data="request_technician"
         )
     )
@@ -213,7 +212,7 @@ def request_technician(call):
     user_id = call.message.chat.id
 
     user_states[user_id] = UserState.NAME
-    bot.send_message(user_id, "Indica tu nombre completo:")
+    bot.send_message(user_id, "Введите ваше *полное имя*:")
 
 
 @bot.message_handler(func=lambda m: user_states.get(m.chat.id) == UserState.NAME)
@@ -221,7 +220,7 @@ def handle_name(message):
     user_id = message.chat.id
     user_data[user_id]["name"] = message.text.strip()
     user_states[user_id] = UserState.PHONE
-    bot.send_message(user_id, "Indica tu número de contacto:")
+    bot.send_message(user_id, "Введите *контактный номер телефона*:")
 
 
 @bot.message_handler(func=lambda m: user_states.get(m.chat.id) == UserState.PHONE)
@@ -229,14 +228,13 @@ def handle_phone(message):
     user_id = message.chat.id
     user_data[user_id]["phone"] = message.text.strip()
     user_states[user_id] = UserState.ADDRESS
-    bot.send_message(user_id, "Indica la dirección:")
+    bot.send_message(user_id, "Введите *адрес*:")
 
 
 @bot.message_handler(func=lambda m: user_states.get(m.chat.id) == UserState.ADDRESS)
 def handle_address(message):
     user_id = message.chat.id
     user_data[user_id]["address"] = message.text.strip()
-    user_states[user_id] = UserState.DATE
 
     if user_data[user_id].get("editing"):
         user_states[user_id] = UserState.CONFIRM
@@ -264,32 +262,30 @@ def handle_hour(call):
     user_data[user_id]["hour"] = int(call.data.split(":", 1)[1])
     user_states[user_id] = UserState.CONFIRM
 
+    show_summary(user_id)
+
+
+def show_summary(user_id):
     d = user_data[user_id]
+
     text = (
-        f"Nombre: {d['name']}\n"
-        f"Teléfono: {d['phone']}\n"
-        f"Dirección: {d['address']}\n"
-        f"Fecha: {d['date']}\n"
-        f"Hora: {d['hour']}:00\n"
-        f"Problema: {d['type']}\n\n"
-        "¿Confirmar?"
+        "*Сводка записи на обслуживание:*\n\n"
+        f"Имя: {d['name']}\n"
+        f"Телефон: {d['phone']}\n"
+        f"Адрес: {d['address']}\n"
+        f"Дата: {d['date']}\n"
+        f"Время: {d['hour']}:00\n"
+        f"Проблема: {d['type']}\n\n"
+        "Подтвердить запись?"
     )
 
     markup = types.InlineKeyboardMarkup()
     markup.add(
-        types.InlineKeyboardButton(
-            text="Confirmar",
-            callback_data="confirm_appointment"
-        )
-    )
-    markup.add(
-        types.InlineKeyboardButton(
-            text="Editar",
-            callback_data="edit_appointment"
-        )
+        types.InlineKeyboardButton("Подтвердить", callback_data="confirm_appointment"),
+        types.InlineKeyboardButton("Изменить данные", callback_data="edit_appointment"),
     )
 
-    bot.send_message(user_id, text, reply_markup=markup)
+    bot.send_message(user_id, text, reply_markup=markup, parse_mode="Markdown")
 
 
 @bot.callback_query_handler(func=lambda c: c.data == "confirm_appointment")
@@ -300,7 +296,7 @@ def confirm_appointment(call):
     is_editing = user_data[user_id].get("editing", False)
 
     if not is_editing and has_active_appointment(user_id):
-        bot.send_message(user_id, "Ya tienes una cita activa.")
+        bot.send_message(user_id, "У вас уже есть активная запись.")
         return
 
     if is_editing:
@@ -311,11 +307,11 @@ def confirm_appointment(call):
         success = create_appointment(data)
 
     if not success:
-        bot.send_message(user_id, "Conflicto de horario.")
+        bot.send_message(user_id, "Выбранное время уже занято.")
         show_date_selection(user_id)
         return
 
-    bot.send_message(user_id, "Cita confirmada con éxito.")
+    bot.send_message(user_id, "Запись успешно подтверждена.")
     user_states.pop(user_id, None)
     user_data.pop(user_id, None)
     save_user_state(user_id, None, {})
@@ -344,69 +340,40 @@ def edit_address(call):
     user_id = call.message.chat.id
     ensure_user_data_from_db(user_id)
     user_states[user_id] = UserState.ADDRESS
-    bot.send_message(user_id, "Indica la nueva dirección:")
+    bot.send_message(user_id, "Введите *новый адрес*:")
 
 
 @bot.message_handler(commands=["change"])
 def cmd_change(message):
     user_id = message.chat.id
     if not has_active_appointment(user_id):
-        bot.send_message(user_id, "No tienes citas activas.")
+        bot.send_message(user_id, "У вас нет активных записей.")
         return
     ensure_user_data_from_db(user_id)
     show_edit_menu(user_id)
 
-def show_summary(user_id):
-    d = user_data[user_id]
-
-    text = (
-        "*Resumen de la cita técnica:*\n\n"
-        f"Nombre: {d['name']}\n"
-        f"Teléfono: {d['phone']}\n"
-        f"Dirección: {d['address']}\n"
-        f"Fecha: {d['date']}\n"
-        f"Hora: {d['hour']}:00\n"
-        f"Problema: {d['type']}\n\n"
-        "¿Deseas confirmar la cita?"
-    )
-
-    markup = types.InlineKeyboardMarkup()
-    markup.add(
-        types.InlineKeyboardButton("Confirmar", callback_data="confirm_appointment"),
-        types.InlineKeyboardButton("Cambiar datos", callback_data="edit_appointment"),
-    )
-
-    bot.send_message(user_id, text, reply_markup=markup, parse_mode="Markdown")
 
 @bot.message_handler(commands=["cancel"])
 def cmd_cancel(message):
     user_id = message.chat.id
 
     if not has_active_appointment(user_id):
-        bot.send_message(
-            user_id,
-            "No tienes ninguna cita activa para cancelar."
-        )
+        bot.send_message(user_id, "У вас нет активной записи для отмены.")
         return
 
     markup = types.InlineKeyboardMarkup()
     markup.add(
-        types.InlineKeyboardButton(
-            text="Sí, cancelar",
-            callback_data="confirm_cancel"
-        ),
-        types.InlineKeyboardButton(
-            text="No",
-            callback_data="abort_cancel"
-        )
+        types.InlineKeyboardButton("Да, отменить", callback_data="confirm_cancel"),
+        types.InlineKeyboardButton("Нет", callback_data="abort_cancel")
     )
 
     bot.send_message(
         user_id,
-        "¿Estás seguro de que deseas *cancelar tu cita técnica*?",
+        "Вы уверены, что хотите *отменить запись*?",
         reply_markup=markup,
         parse_mode="Markdown"
     )
+
 
 @bot.callback_query_handler(func=lambda c: c.data == "confirm_cancel")
 def confirm_cancel(call):
@@ -416,30 +383,21 @@ def confirm_cancel(call):
     success = cancel_appointment(user_id)
 
     if success:
-        bot.send_message(
-            user_id,
-            "Tu cita ha sido *cancelada correctamente*.",
-            parse_mode="Markdown"
-        )
+        bot.send_message(user_id, "Запись успешно отменена.")
     else:
-        bot.send_message(
-            user_id,
-            "No se pudo cancelar la cita."
-        )
+        bot.send_message(user_id, "Не удалось отменить запись.")
 
     user_states.pop(user_id, None)
     user_data.pop(user_id, None)
     save_user_state(user_id, None, {})
+
 
 @bot.callback_query_handler(func=lambda c: c.data == "abort_cancel")
 def abort_cancel(call):
     bot.answer_callback_query(call.id)
     user_id = call.message.chat.id
 
-    bot.send_message(
-        user_id,
-        "Cancelación abortada. Tu cita sigue activa."
-    )
+    bot.send_message(user_id, "Отмена отменена. Запись остаётся активной.")
 
 
 if __name__ == "__main__":
