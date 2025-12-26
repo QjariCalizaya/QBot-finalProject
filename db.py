@@ -142,3 +142,16 @@ def update_appointment(user_id: int, data: dict) -> bool:
         return True
     except sqlite3.IntegrityError:
         return False
+
+def get_active_appointment(user_id: int) -> dict | None:
+    with _connect() as conn:
+        cur = conn.execute("""
+            SELECT
+                name, phone, address, date, hour, type
+            FROM appointments
+            WHERE user_id = ? AND status = 'active'
+        """, (user_id,))
+        row = cur.fetchone()
+        if row:
+            return dict(row)
+        return None
