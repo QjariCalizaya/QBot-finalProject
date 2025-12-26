@@ -241,6 +241,44 @@ def handle_client_name(message: types.Message):
     )
 
 
+@bot.message_handler(
+    func=lambda message: user_states.get(message.chat.id) == UserState.ADDRESS
+)
+def handle_client_address(message: types.Message):
+    user_id = message.chat.id
+    address = message.text.strip()
+
+    # Validación básica
+    if len(address) < 5 or address.isdigit():
+        bot.send_message(
+            user_id,
+            "La dirección ingresada no es válida.\n"
+            "Por favor, escribe una *dirección completa* (calle, número, referencia).",
+            parse_mode="Markdown"
+        )
+        return
+
+    # Guardar dirección
+    user_data[user_id]["address"] = address
+
+    # Avanzar al siguiente estado (fecha)
+    user_states[user_id] = UserState.DATE
+
+    # Persistir estado
+    save_user_state(
+        user_id,
+        UserState.DATE.value,
+        user_data[user_id]
+    )
+
+    # Mensaje temporal (luego aquí irán las fechas)
+    bot.send_message(
+        user_id,
+        "Dirección guardada correctamente.\n"
+        "A continuación podrás seleccionar la *fecha de la cita*."
+    )
+
+
 
 if __name__ == "__main__":
     setup_bot_commands()
