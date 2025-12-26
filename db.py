@@ -26,6 +26,7 @@ def init_db():
             user_id INTEGER NOT NULL,
 
             name TEXT NOT NULL,
+            phone TEXT NOT NULL,
             address TEXT NOT NULL,
 
             date TEXT NOT NULL,        
@@ -96,15 +97,16 @@ def create_appointment(data: dict) -> bool:
                 INSERT INTO appointments (
                     user_id,
                     name,
+                    phone,
                     address,
                     date,
                     hour,
-                    type,
-                    status
-                ) VALUES (?, ?, ?, ?, ?, ?, 'active')
+                    type
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (
                 data["user_id"],
                 data["name"],
+                data["phone"],
                 data["address"],
                 data["date"],
                 data["hour"],

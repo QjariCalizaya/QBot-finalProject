@@ -45,7 +45,9 @@ bot = telebot.TeleBot(TOKEN)
 def setup_bot_commands():
     commands = [
         telebot.types.BotCommand(command='help', description='справка и доступные функции'),
-        telebot.types.BotCommand(command="start", description="начать работу с ботом")
+        telebot.types.BotCommand(command="start", description="начать работу с ботом"),
+        telebot.types.BotCommand(command="change", description="изменить время приема"),
+        
 
     ]
     bot.set_my_commands(commands)
@@ -228,8 +230,35 @@ def handle_client_name(message: types.Message):
         return
 
     user_data[user_id]["name"] = name
-    user_states[user_id] = UserState.ADDRESS
+    user_states[user_id] = UserState.PHONE
+    save_user_state(user_id, UserState.PHONE.value, user_data[user_id])
 
+    bot.send_message(
+        user_id,
+        "Por favor, indica tu *número de contacto*:\n"
+        "Ejemplo: +34123456789",
+        parse_mode="Markdown"
+    )
+
+@bot.message_handler(
+    func=lambda message: user_states.get(message.chat.id) == UserState.PHONE
+)
+def handle_client_phone(message: types.Message):
+    user_id = message.chat.id
+    phone = message.text.strip()
+
+    if len(phone) < 7 or not any(char.isdigit() for char in phone):
+        bot.send_message(
+            user_id,
+            "El número ingresado no es válido.\n"
+            "Por favor, escribe un *número de contacto válido*.",
+            parse_mode="Markdown"
+        )
+        return
+
+    user_data[user_id]["phone"] = phone
+
+    user_states[user_id] = UserState.ADDRESS
     save_user_state(
         user_id,
         UserState.ADDRESS.value,
@@ -241,6 +270,9 @@ def handle_client_name(message: types.Message):
         "Ahora, por favor indica la *dirección completa* donde se realizará la revisión:",
         parse_mode="Markdown"
     )
+
+
+
 
 
 @bot.message_handler(
@@ -403,6 +435,7 @@ def handle_hour_selection(call):
     summary = (
         "*Resumen de la cita técnica:*\n\n"
         f"Nombre: {user_data[user_id]['name']}\n"
+        #f"Teléfono: {user_data[user_id]['phone']}\n"
         f"Dirección: {user_data[user_id]['address']}\n"
         f"Fecha: {user_data[user_id]['date']}\n"
         f"Hora: {hour}:00\n"
@@ -488,7 +521,8 @@ def confirm_appointment(call):
         "*Cita confirmada con éxito*\n\n"
         f"Fecha: {appointment_data['date']}\n"
         f"Hora: {appointment_data['hour']}:00\n"
-        f"Dirección: {appointment_data['address']}\n\n"
+        f"Dirección: {appointment_data['address']}\n"
+        f"Telefono: {appointment_data['phone']}\n\n"
         "Nuestro técnico se pondrá en contacto contigo.",
         parse_mode="Markdown"
     )
