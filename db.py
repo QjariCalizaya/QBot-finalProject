@@ -168,3 +168,15 @@ def get_active_appointment(user_id: int) -> dict | None:
         if row:
             return dict(row)
         return None
+
+def cancel_appointment(user_id: int) -> bool:
+    with _connect() as conn:
+        cur = conn.execute(
+            """
+            UPDATE appointments
+            SET status = 'cancelled'
+            WHERE user_id = ? AND status = 'active'
+            """,
+            (user_id,)
+        )
+        return cur.rowcount > 0

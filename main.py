@@ -45,6 +45,8 @@ def setup_bot_commands():
         telebot.types.BotCommand(command="help", description="справка"),
         telebot.types.BotCommand(command="start", description="начать"),
         telebot.types.BotCommand(command="change", description="изменить запись"),
+        telebot.types.BotCommand(command="cancel", description="cancelar cita"),
+
     ]
     bot.set_my_commands(commands)
 
@@ -376,6 +378,68 @@ def show_summary(user_id):
 
     bot.send_message(user_id, text, reply_markup=markup, parse_mode="Markdown")
 
+@bot.message_handler(commands=["cancel"])
+def cmd_cancel(message):
+    user_id = message.chat.id
+
+    if not has_active_appointment(user_id):
+        bot.send_message(
+            user_id,
+            "No tienes ninguna cita activa para cancelar."
+        )
+        return
+
+    markup = types.InlineKeyboardMarkup()
+    markup.add(
+        types.InlineKeyboardButton(
+            text="Sí, cancelar",
+            callback_data="confirm_cancel"
+        ),
+        types.InlineKeyboardButton(
+            text="No",
+            callback_data="abort_cancel"
+        )
+    )
+
+    bot.send_message(
+        user_id,
+        "¿Estás seguro de que deseas *cancelar tu cita técnica*?",
+        reply_markup=markup,
+        parse_mode="Markdown"
+    )
+
+@bot.callback_query_handler(func=lambda c: c.data == "confirm_cancel")
+def confirm_cancel(call):
+    bot.answer_callback_query(call.id)
+    user_id = call.message.chat.id
+
+    success = cancel_appointment(user_id)
+
+    if success:
+        bot.send_message(
+            user_id,
+            "Tu cita ha sido *cancelada correctamente*.",
+            parse_mode="Markdown"
+        )
+    else:
+        bot.send_message(
+            user_id,
+            "No se pudo cancelar la cita."
+        )
+
+    user_states.pop(user_id, None)
+    user_data.pop(user_id, None)
+    save_user_state(user_id, None, {})
+
+@bot.callback_query_handler(func=lambda c: c.data == "abort_cancel")
+def abort_cancel(call):
+    bot.answer_callback_query(call.id)
+    user_id = call.message.chat.id
+
+    bot.send_message(
+        user_id,
+        "Cancelación abortada. Tu cita sigue activa."
+    )
 
 
 if __name__ == "__main__":
