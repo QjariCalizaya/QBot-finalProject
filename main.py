@@ -138,18 +138,17 @@ def handle_issue(call):
     user_id = call.message.chat.id
     issue = call.data.split(":", 1)[1]
 
-    # Guardamos el tipo de problema
+
     user_states[user_id] = UserState.SHOW_SOLUTIONS
     user_data[user_id]["type"] = issue
 
-    # Construimos el texto de soluciones
+
     text = "*Soluciones rápidas recomendadas:*\n\n"
     for solution in ISSUES[issue]:
         text += f"• {solution}\n"
 
     text += "\nSi el problema persiste, puedes solicitar un técnico."
 
-    # Botones debajo del mensaje
     markup = types.InlineKeyboardMarkup()
     markup.add(
         types.InlineKeyboardButton(
@@ -171,7 +170,7 @@ def handle_issue(call):
         parse_mode="Markdown"
     )
 
-    # Persistimos estado
+
     save_user_state(
         user_id,
         UserState.SHOW_SOLUTIONS.value,
@@ -182,7 +181,7 @@ def handle_issue(call):
 def back_to_start(call):
     bot.answer_callback_query(call.id)
 
-    # Reutilizamos /start
+
     cmd_start(call.message)
 
 
@@ -192,7 +191,6 @@ def request_technician(call):
 
     user_id = call.message.chat.id
 
-    # Regla de negocio: solo una cita activa
     if has_active_appointment(user_id):
         bot.send_message(
             user_id,
@@ -207,6 +205,38 @@ def request_technician(call):
     bot.send_message(
         user_id,
         "Por favor, indica tu *nombre completo*:",
+        parse_mode="Markdown"
+    )
+
+@bot.message_handler(
+    func=lambda message: user_states.get(message.chat.id) == UserState.NAME
+)
+def handle_client_name(message: types.Message):
+    user_id = message.chat.id
+    name = message.text.strip()
+
+
+    if len(name) < 3 or name.isdigit():
+        bot.send_message(
+            user_id,
+            "El nombre ingresado no es válido.\n"
+            "Por favor, escribe tu *nombre completo*.",
+            parse_mode="Markdown"
+        )
+        return
+
+    user_data[user_id]["name"] = name
+    user_states[user_id] = UserState.ADDRESS
+
+    save_user_state(
+        user_id,
+        UserState.ADDRESS.value,
+        user_data[user_id]
+    )
+
+    bot.send_message(
+        user_id,
+        "Ahora, por favor indica la *dirección completa* donde se realizará la revisión:",
         parse_mode="Markdown"
     )
 
