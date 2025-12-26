@@ -23,9 +23,20 @@ def init_db():
         conn.execute("""
         CREATE TABLE IF NOT EXISTS appointments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            status TEXT
-        )
+            user_id INTEGER NOT NULL,
+
+            name TEXT NOT NULL,
+            address TEXT NOT NULL,
+
+            date TEXT NOT NULL,        
+            hour INTEGER NOT NULL,     
+
+            type TEXT NOT NULL,  
+            status TEXT NOT NULL DEFAULT 'active',
+
+            UNIQUE(date, hour),
+            UNIQUE(user_id, status)
+        );
         """)
 
         conn.execute("""
@@ -69,3 +80,11 @@ def load_user_state(user_id):
         if row:
             return row[0], json.loads(row[1])
         return None, {}
+
+def get_taken_hours(date: str) -> list[int]:
+    with _connect() as conn:
+        cur = conn.execute(
+            "SELECT hour FROM appointments WHERE date = ? AND status = 'active'",
+            (date,)
+        )
+        return [row["hour"] for row in cur.fetchall()]

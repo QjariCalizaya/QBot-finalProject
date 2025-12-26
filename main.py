@@ -12,6 +12,7 @@ from datetime import date, timedelta
 load_dotenv()
 
 TOKEN = os.getenv("TOKEN") or ""
+WORKING_HOURS = list(range(9, 18))
 
 if not TOKEN:
     raise RuntimeError("there isn't TOKEN in .env")
@@ -338,7 +339,112 @@ def handle_date_selection(call):
         parse_mode="Markdown"
     )
 
-    #show_hour_selection()
+    show_hour_selection(user_id)
+
+
+def show_hour_selection(user_id):
+    selected_date = user_data[user_id]["date"]
+
+    taken_hours = get_taken_hours(selected_date)
+    available_hours = [
+        h for h in WORKING_HOURS if h not in taken_hours
+    ]
+
+    if not available_hours:
+        bot.send_message(
+            user_id,
+            "No hay horarios disponibles para esta fecha.\n"
+            "Por favor selecciona otra fecha."
+        )
+        show_date_selection(user_id)
+        return
+
+    markup = types.InlineKeyboardMarkup()
+
+    for hour in available_hours:
+        markup.add(
+            types.InlineKeyboardButton(
+                text=f"{hour}:00",
+                callback_data=f"hour:{hour}"
+            )
+        )
+
+    markup.add(
+        types.InlineKeyboardButton(
+            text="Cambiar fecha",
+            callback_data="change_date"
+        )
+    )
+
+    bot.send_message(
+        user_id,
+        "Selecciona un *horario disponible*:",
+        reply_markup=markup,
+        parse_mode="Markdown"
+    )
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("hour:"))
+def handle_hour_selection(call):
+    bot.answer_callback_query(call.id)
+
+    user_id = call.message.chat.id
+    hour = int(call.data.split(":", 1)[1])
+
+    user_data[user_id]["hour"] = hour
+    user_states[user_id] = UserState.CONFIRM
+
+    save_user_state(
+        user_id,
+        UserState.CONFIRM.value,
+        user_data[user_id]
+    )
+
+    summary = (
+        "*Resumen de la cita técnica:*\n\n"
+        f"Nombre: {user_data[user_id]['name']}\n"
+        f"Dirección: {user_data[user_id]['address']}\n"
+        f"Fecha: {user_data[user_id]['date']}\n"
+        f"Hora: {hour}:00\n"
+        f"Problema: {user_data[user_id]['type']}\n\n"
+        "¿Deseas confirmar la cita?"
+    )
+
+    markup = types.InlineKeyboardMarkup()
+    markup.add(
+        types.InlineKeyboardButton(
+            text="Confirmar",
+            callback_data="confirm_appointment"
+        )
+    )
+    markup.add(
+        types.InlineKeyboardButton(
+            text="Cambiar datos",
+            callback_data="edit_appointment"
+        )
+    )
+
+    bot.send_message(
+        user_id,
+        summary,
+        reply_markup=markup,
+        parse_mode="Markdown"
+    )
+
+@bot.callback_query_handler(func=lambda call: call.data == "change_date")
+def change_date(call):
+    bot.answer_callback_query(call.id)
+
+    user_id = call.message.chat.id
+    user_states[user_id] = UserState.DATE
+
+    save_user_state(
+        user_id,
+        UserState.DATE.value,
+        user_data[user_id]
+    )
+
+    show_date_selection(user_id)
 
 
 
