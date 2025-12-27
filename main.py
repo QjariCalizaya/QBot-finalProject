@@ -46,6 +46,8 @@ def setup_bot_commands():
         telebot.types.BotCommand(command="start", description="начать"),
         telebot.types.BotCommand(command="change", description="изменить запись"),
         telebot.types.BotCommand(command="cancel", description="отменить запись"),
+        telebot.types.BotCommand(command="myappointment", description="смотреть настроящий запись"),
+
     ]
     bot.set_my_commands(commands)
 
@@ -138,7 +140,7 @@ def show_edit_menu(user_id):
 def cmd_help(message):
     bot.send_message(
         message.chat.id,
-        "/start — начать\n/change — изменить запись\n/cancel — отменить запись"
+        "/start — начать\n/change — изменить запись\n/cancel — отменить запись\n/myappointment - смотреть настроящий запись"
     )
 
 
@@ -399,6 +401,50 @@ def abort_cancel(call):
 
     bot.send_message(user_id, "Отмена отменена. Запись остаётся активной.")
 
+
+@bot.message_handler(commands=["myappointment"])
+def cmd_myappointment(message):
+    user_id = message.chat.id
+
+    appointment = get_active_appointment(user_id)
+
+    if not appointment:
+        bot.send_message(
+            user_id,
+            "У вас нет активной записи."
+        )
+        return
+
+    text = (
+        "*Ваша текущая запись:*\n\n"
+        f"Имя: {appointment['name']}\n"
+        f"Телефон: {appointment['phone']}\n"
+        f"Адрес: {appointment['address']}\n"
+        f"Дата: {appointment['date']}\n"
+        f"Время: {appointment['hour']}:00\n"
+        f"Проблема: {appointment['type']}\n"
+    )
+
+    markup = types.InlineKeyboardMarkup()
+    markup.add(
+        types.InlineKeyboardButton(
+            text="Изменить запись",
+            callback_data="edit_appointment"
+        )
+    )
+    markup.add(
+        types.InlineKeyboardButton(
+            text="Отменить запись",
+            callback_data="confirm_cancel"
+        )
+    )
+
+    bot.send_message(
+        user_id,
+        text,
+        reply_markup=markup,
+        parse_mode="Markdown"
+    )
 
 if __name__ == "__main__":
     setup_bot_commands()
