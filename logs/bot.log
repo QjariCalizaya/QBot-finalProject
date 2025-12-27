@@ -50,3 +50,4 @@ Traceback (most recent call last):
             ^^^^
 UnboundLocalError: cannot access local variable 'data' where it is not associated with a value
 
+2025.12.27 04:04:08 | INFO | __main__ | appointment_confirmed | user_id=1865993842 date=2025-12-31 hour=14
