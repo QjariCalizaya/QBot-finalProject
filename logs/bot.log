@@ -1,0 +1,52 @@
+2025.12.27 03:58:21 | ERROR | TeleBot | Infinity polling exception: cannot access local variable 'data' where it is not associated with a value
+2025.12.27 03:58:21 | ERROR | TeleBot | Exception traceback:
+Traceback (most recent call last):
+  File "D:\work\universidad\QBot-finalProject\.venv\Lib\site-packages\telebot\__init__.py", line 1110, in infinity_polling
+    self.polling(non_stop=True, timeout=timeout, long_polling_timeout=long_polling_timeout,
+  File "D:\work\universidad\QBot-finalProject\.venv\Lib\site-packages\telebot\__init__.py", line 1198, in polling
+    self.__threaded_polling(non_stop=non_stop, interval=interval, timeout=timeout, long_polling_timeout=long_polling_timeout,
+  File "D:\work\universidad\QBot-finalProject\.venv\Lib\site-packages\telebot\__init__.py", line 1273, in __threaded_polling
+    raise e
+  File "D:\work\universidad\QBot-finalProject\.venv\Lib\site-packages\telebot\__init__.py", line 1235, in __threaded_polling
+    self.worker_pool.raise_exceptions()
+  File "D:\work\universidad\QBot-finalProject\.venv\Lib\site-packages\telebot\util.py", line 154, in raise_exceptions
+    raise self.exception_info
+  File "D:\work\universidad\QBot-finalProject\.venv\Lib\site-packages\telebot\util.py", line 97, in run
+    task(*args, **kwargs)
+  File "D:\work\universidad\QBot-finalProject\.venv\Lib\site-packages\telebot\__init__.py", line 10134, in _run_middlewares_and_handler
+    result = handler['function'](message)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\work\universidad\QBot-finalProject\main.py", line 330, in confirm_appointment
+    f"date={data['date']} hour={data['hour']}"
+            ^^^^
+UnboundLocalError: cannot access local variable 'data' where it is not associated with a value
+
+2025.12.27 04:00:09 | INFO | db | db_create_appointment_success | user_id=1865993842 date=2026-01-03 hour=13
+2025.12.27 04:00:09 | INFO | __main__ | appointment_confirmed | user_id=1865993842 date=2026-01-03 hour=13
+2025.12.27 04:00:15 | INFO | db | db_cancel_appointment_success | user_id=1865993842
+2025.12.27 04:00:15 | INFO | __main__ | appointment_canceled | user_id=1865993842
+2025.12.27 04:00:40 | INFO | db | db_create_appointment_success | user_id=1865993842 date=2025-12-30 hour=15
+2025.12.27 04:00:40 | INFO | __main__ | appointment_confirmed | user_id=1865993842 date=2025-12-30 hour=15
+2025.12.27 04:00:47 | ERROR | TeleBot | Infinity polling exception: cannot access local variable 'data' where it is not associated with a value
+2025.12.27 04:00:47 | ERROR | TeleBot | Exception traceback:
+Traceback (most recent call last):
+  File "D:\work\universidad\QBot-finalProject\.venv\Lib\site-packages\telebot\__init__.py", line 1110, in infinity_polling
+    self.polling(non_stop=True, timeout=timeout, long_polling_timeout=long_polling_timeout,
+  File "D:\work\universidad\QBot-finalProject\.venv\Lib\site-packages\telebot\__init__.py", line 1198, in polling
+    self.__threaded_polling(non_stop=non_stop, interval=interval, timeout=timeout, long_polling_timeout=long_polling_timeout,
+  File "D:\work\universidad\QBot-finalProject\.venv\Lib\site-packages\telebot\__init__.py", line 1273, in __threaded_polling
+    raise e
+  File "D:\work\universidad\QBot-finalProject\.venv\Lib\site-packages\telebot\__init__.py", line 1235, in __threaded_polling
+    self.worker_pool.raise_exceptions()
+  File "D:\work\universidad\QBot-finalProject\.venv\Lib\site-packages\telebot\util.py", line 154, in raise_exceptions
+    raise self.exception_info
+  File "D:\work\universidad\QBot-finalProject\.venv\Lib\site-packages\telebot\util.py", line 97, in run
+    task(*args, **kwargs)
+  File "D:\work\universidad\QBot-finalProject\.venv\Lib\site-packages\telebot\__init__.py", line 10134, in _run_middlewares_and_handler
+    result = handler['function'](message)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\work\universidad\QBot-finalProject\main.py", line 330, in confirm_appointment
+    f"date={data['date']} hour={data['hour']}"
+            ^^^^
+UnboundLocalError: cannot access local variable 'data' where it is not associated with a value
+

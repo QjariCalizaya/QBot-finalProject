@@ -6,6 +6,8 @@ from db import *
 from states import *
 from config import *
 from datetime import date, timedelta
+import logging
+from logging_config import setup_logging
 
 load_dotenv()
 
@@ -36,6 +38,10 @@ ISSUES = {
         "Подойдите ближе к роутеру."
     ]
 }
+
+setup_logging()
+logger = logging.getLogger(__name__)
+
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -158,6 +164,7 @@ def cmd_start(message):
         user_states[user_id] = UserState(state)
         user_data[user_id] = data
         bot.send_message(user_id, "Продолжаем с того места, где вы остановились.")
+        logger.info(f"/start | user_id={user_id}")
         return
 
     user_states[user_id] = UserState.START
@@ -295,16 +302,17 @@ def confirm_appointment(call):
     bot.answer_callback_query(call.id)
     user_id = call.message.chat.id
 
-    is_editing = user_data[user_id].get("editing", False)
+    appointment = user_data[user_id]
+    is_editing = appointment.get("editing", False)
 
     if not is_editing and has_active_appointment(user_id):
         bot.send_message(user_id, "У вас уже есть активная запись.")
         return
 
     if is_editing:
-        success = update_appointment(user_id, user_data[user_id])
+        success = update_appointment(user_id, appointment)
     else:
-        data = user_data[user_id].copy()
+        data = appointment.copy()
         data["user_id"] = user_id
         success = create_appointment(data)
 
@@ -314,9 +322,19 @@ def confirm_appointment(call):
         return
 
     bot.send_message(user_id, "Запись успешно подтверждена.")
+
+    logger.info(
+        "appointment_confirmed | user_id=%s date=%s hour=%s",
+        user_id,
+        appointment["date"],
+        appointment["hour"],
+    )
+
     user_states.pop(user_id, None)
     user_data.pop(user_id, None)
     save_user_state(user_id, None, {})
+
+
 
 
 @bot.callback_query_handler(func=lambda c: c.data == "edit_appointment")
@@ -325,6 +343,8 @@ def edit_appointment(call):
     user_id = call.message.chat.id
     ensure_user_data_from_db(user_id)
     show_edit_menu(user_id)
+    logger.info(f"appointment_edit_requested | user_id={user_id}")
+
 
 
 @bot.callback_query_handler(func=lambda c: c.data == "edit_datetime")
@@ -386,8 +406,10 @@ def confirm_cancel(call):
 
     if success:
         bot.send_message(user_id, "Запись успешно отменена.")
+        logger.info(f"appointment_canceled | user_id={user_id}")
     else:
         bot.send_message(user_id, "Не удалось отменить запись.")
+        logger.error(f"appointment_cancel_failed | user_id={user_id}")
 
     user_states.pop(user_id, None)
     user_data.pop(user_id, None)

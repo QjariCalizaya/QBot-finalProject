@@ -3,14 +3,23 @@ import sqlite3
 import json
 from typing import Any, Dict, Optional, Tuple, List
 from dotenv import load_dotenv
+import logging
+from logging_config import setup_logging
 
 load_dotenv()
+
+setup_logging()
+logger = logging.getLogger(__name__)
+
+
+
 
 def _get_db_path() -> str:
     return os.getenv("DB_PATH") or "bot.sqlite3"
 
 
 def _connect() -> sqlite3.Connection:
+    logger.debug("db_connect")
     conn = sqlite3.connect(_get_db_path())
     conn.row_factory = sqlite3.Row
     #conn.execute("PRAGMA journal_mode = WAL")
@@ -78,8 +87,16 @@ def create_appointment(data: Dict[str, Any]) -> bool:
             data["type"],
         ))
         conn.commit()
+        logger.info(
+            f"db_create_appointment_success | user_id={data['user_id']} "
+            f"date={data['date']} hour={data['hour']}"
+        )
         return True
-    except sqlite3.IntegrityError:
+    except sqlite3.IntegrityError as e:
+        logger.warning(
+            f"db_create_appointment_conflict | user_id={data.get('user_id')} "
+            f"date={data.get('date')} hour={data.get('hour')} | {e}"
+        )
         return False
     finally:
         conn.close()
@@ -102,8 +119,17 @@ def update_appointment(user_id: int, data: Dict[str, Any]) -> bool:
             user_id,
         ))
         conn.commit()
+        if cur.rowcount == 0:
+            logger.warning(
+            f"db_update_appointment_not_found | user_id={user_id}"
+        )
+
         return cur.rowcount > 0
-    except sqlite3.IntegrityError:
+    except sqlite3.IntegrityError as e:
+        logger.warning(
+            f"db_update_appointment_conflict | user_id={user_id} "
+            f"date={data.get('date')} hour={data.get('hour')} | {e}"
+        )
         return False
     finally:
         conn.close()
@@ -118,7 +144,13 @@ def cancel_appointment(user_id: int) -> bool:
             WHERE user_id=? AND status='active'
         """, (user_id,))
         conn.commit()
-        return cur.rowcount > 0
+        if cur.rowcount > 0:
+            logger.info(f"db_cancel_appointment_success | user_id={user_id}")
+            return True
+        
+
+        logger.warning(f"db_cancel_appointment_not_found | user_id={user_id}")
+        return False
     finally:
         conn.close()
 
@@ -195,5 +227,11 @@ def load_user_state(user_id: int) -> Tuple[Optional[str], Dict[str, Any]]:
         if not row:
             return None, {}
         return row["state"], json.loads(row["data"] or "{}")
+    except json.JSONDecodeError:
+            logger.error(
+                f"user_state_json_error | user_id={user_id}"
+            )    
+
+
     finally:
         conn.close()
